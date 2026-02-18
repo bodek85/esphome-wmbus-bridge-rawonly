@@ -64,3 +64,15 @@ external_components:
 
 
 GPL-3.0-or-later – patrz `LICENSE` i `NOTICE`.
+
+
+FAQ (krótko)
+
+Czy to dekoduje liczniki na ESP?
+Nie. ESP tylko odbiera i wysyła HEX. Dekoduje wmbusmeters na HA.
+
+Czy działa tylko na T1?
+Obsługuje T1 i C1 (wykrywa tryb i składa ramkę do publikacji).
+
+Po co to, skoro są “kombajny” w ESP?
+Bo tutaj celem jest minimalna logika na ESP i maksimum kompatybilności po stronie HA.
