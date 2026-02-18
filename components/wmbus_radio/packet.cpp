@@ -107,7 +107,14 @@ uint8_t *Packet::append_space(size_t len) {
 std::optional<Frame> Packet::convert_to_frame() {
   std::optional<Frame> frame = {};
 
+  // drop junk / partial frames (noise)
+  const auto mode = this->link_mode();
+  if (mode == LinkMode::T1 && this->data_.size() < 60) { delete this; return {}; }
+  if (mode == LinkMode::C1 && this->data_.size() < 16) { delete this; return {}; }
+
   ESP_LOGD(TAG, "Have data from radio (%zu bytes)", this->data_.size());
+  // ... reszta Twojego kodu bez zmian
+
   // Intentionally no wmbusmeters debugPayload() here to avoid pulling heavy code.
 
   const size_t exp = this->expected_size();
