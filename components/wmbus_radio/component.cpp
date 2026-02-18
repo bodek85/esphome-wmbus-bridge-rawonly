@@ -42,10 +42,15 @@ void Radio::loop() {
   if (!frame)
     return;
 
-  ESP_LOGI(TAG, "Have data (%zu bytes) [RSSI: %ddBm, mode: %s %s]",
+  const char *hint = "";
+  if (frame->t2_hint()) {
+    hint = (frame->link_mode() == LinkMode::C1) ? " [C2?]" : " [T2?]";
+  }
+
+  ESP_LOGI(TAG, "Have data (%zu bytes) [RSSI: %ddBm, mode: %s %s%s]",
            frame->data().size(), frame->rssi(),
            link_mode_name(frame->link_mode()),
-           frame->format().c_str());
+           frame->format().c_str(), hint);
 
   for (auto &handler : this->handlers_)
     handler(&frame.value());

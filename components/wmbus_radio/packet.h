@@ -46,6 +46,8 @@ protected:
   LinkMode link_mode_ = LinkMode::UNKNOWN;
 
   std::string frame_format_;
+
+  bool t2_hint_ = false;
 };
 
 struct Frame {
@@ -56,6 +58,7 @@ public:
   LinkMode link_mode();
   int8_t rssi();
   std::string format();
+  bool t2_hint();
 
   std::vector<uint8_t> as_raw();
   std::string as_hex();
@@ -69,6 +72,7 @@ protected:
   LinkMode link_mode_;
   int8_t rssi_;
   std::string format_;
+  bool t2_hint_ = false;
   uint8_t handlers_count_ = 0;
 };
 

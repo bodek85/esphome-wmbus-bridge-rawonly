@@ -122,6 +122,19 @@ static bool strip_dll_crc_format_a_inplace(std::vector<uint8_t> &d) {
   return true;
 }
 
+
+// Heuristic hint: if telegram looks like it uses ELL and sets the bidirectional bit in CC,
+// we label it as "T2?/C2?" in logs. This does NOT change radio PHY settings.
+static bool bidirectional_hint_from_ell(const std::vector<uint8_t> &d) {
+  // Minimal wireless M-Bus DLL header is 11 bytes: L C M(2) A(6) CI
+  if (d.size() < 12) return false;
+  const uint8_t ci = d[10];
+  // ELL long transport layer CI commonly 0x7A; keep a small allowlist.
+  if (ci != 0x7A && ci != 0x72 && ci != 0x78) return false;
+  const uint8_t cc = d[11];
+  return (cc & 0x80) != 0;
+}
+
 std::optional<Frame> Packet::convert_to_frame() {
   std::optional<Frame> frame = {};
 
@@ -181,6 +194,9 @@ std::optional<Frame> Packet::convert_to_frame() {
     return {};
   }
 
+  // Heuristic T2/C2 hint for logs
+  this->t2_hint_ = bidirectional_hint_from_ell(this->data_);
+
   // OK -> publish
   frame.emplace(this);
   delete this;
@@ -189,12 +205,13 @@ std::optional<Frame> Packet::convert_to_frame() {
 
 Frame::Frame(Packet *packet)
     : data_(std::move(packet->data_)), link_mode_(packet->link_mode_),
-      rssi_(packet->rssi_), format_(packet->frame_format_) {}
+      rssi_(packet->rssi_), format_(packet->frame_format_), t2_hint_(packet->t2_hint_) {}
 
 std::vector<uint8_t> &Frame::data() { return this->data_; }
 LinkMode Frame::link_mode() { return this->link_mode_; }
 int8_t Frame::rssi() { return this->rssi_; }
 std::string Frame::format() { return this->format_; }
+bool Frame::t2_hint() { return this->t2_hint_; }
 
 std::vector<uint8_t> Frame::as_raw() { return this->data_; }
 std::string Frame::as_hex() { return format_hex(this->data_); }
