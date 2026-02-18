@@ -44,8 +44,8 @@ Jeśli masz Home Assistant i i tak używasz `wmbusmeters`, to ESP ma być tylko 
 Repo zawiera poprawki pod praktyczne użycie z `wmbusmeters`, m.in.:
 - odfiltrowanie krótkich śmieci (np. 8 bajtów z zakłóceń),
 - przygotowanie ramek w formacie przyjaznym dla dekodera po stronie HA.
-
 ---
+
 
 ## Instalacja (ESPHome external_components)
 
@@ -66,7 +66,7 @@ external_components:
 GPL-3.0-or-later – patrz `LICENSE` i `NOTICE`.
 
 
-FAQ (krótko)
+## FAQ (krótko)
 
 Czy to dekoduje liczniki na ESP?
 Nie. ESP tylko odbiera i wysyła HEX. Dekoduje wmbusmeters na HA.
