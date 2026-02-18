@@ -14,8 +14,6 @@
 namespace esphome {
 namespace wmbus_radio {
 
-// Alias LinkMode from the lightweight common header.
-using LinkMode = esphome::wmbus_common::LinkMode;
 struct Frame;
 
 struct Packet {
