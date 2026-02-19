@@ -45,6 +45,10 @@ public:
   size_t raw_got_len() const { return this->raw_got_len_; }
   const std::string &drop_reason() const { return this->drop_reason_; }
 
+  // Raw packet bytes (hex) captured at the beginning of convert_to_frame().
+  // Intended for diagnostics; may be truncated to keep MQTT/log payloads small.
+  const std::string &raw_hex() const { return this->raw_hex_; }
+
 protected:
   std::vector<uint8_t> data_;
 
@@ -64,6 +68,7 @@ protected:
   size_t got_len_{0};
   size_t raw_got_len_{0};
   std::string drop_reason_{};
+  std::string raw_hex_{};
 };
 
 struct Frame {

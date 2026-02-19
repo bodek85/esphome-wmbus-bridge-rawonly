@@ -19,6 +19,20 @@ namespace wmbus_radio {
 
 static const char *const TAG = "wmbus_radio.packet";
 
+// Hex-encode up to max_bytes from input. Result contains only 0-9a-f.
+static std::string hex_prefix_(const std::vector<uint8_t> &in, size_t max_bytes) {
+  const size_t n = (max_bytes == 0) ? in.size() : std::min(in.size(), max_bytes);
+  std::string out;
+  out.reserve(n * 2);
+  static const char *hex = "0123456789abcdef";
+  for (size_t i = 0; i < n; i++) {
+    uint8_t b = in[i];
+    out.push_back(hex[b >> 4]);
+    out.push_back(hex[b & 0x0F]);
+  }
+  return out;
+}
+
 Packet::Packet() { this->data_.reserve(WMBUS_PREAMBLE_SIZE); }
 
 // Determine the link mode based on the first byte of the data
@@ -131,6 +145,10 @@ std::optional<Frame> Packet::convert_to_frame() {
   this->got_len_ = 0;
   this->raw_got_len_ = this->data_.size();
   this->drop_reason_.clear();
+
+  // Capture raw bytes (hex) early for diagnostics. Keep it bounded.
+  // 256 bytes -> 512 hex chars, enough for typical dropped packets.
+  this->raw_hex_ = hex_prefix_(this->data_, 256);
 
   // drop junk / partial frames (noise)
   const auto mode = this->link_mode();

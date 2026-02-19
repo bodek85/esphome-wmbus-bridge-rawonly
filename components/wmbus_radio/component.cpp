@@ -110,16 +110,19 @@ void Radio::loop() {
       const char *mode = link_mode_name(p->get_link_mode());
 
       // Build a small JSON payload (no dynamic allocation explosions)
-      char payload[256];
+      char payload[900];
       snprintf(payload, sizeof(payload),
-               "{\"event\":\"truncated\",\"mode\":\"%s\",\"rssi\":%d,\"want\":%u,\"got\":%u,\"raw_got\":%u}",
+               "{\"event\":\"truncated\",\"mode\":\"%s\",\"rssi\":%d,\"want\":%u,\"got\":%u,\"raw_got\":%u,\"raw\":\"%s\"}",
                mode, (int) p->get_rssi(), (unsigned) p->want_len(),
-               (unsigned) p->got_len(), (unsigned) p->raw_got_len());
+               (unsigned) p->got_len(), (unsigned) p->raw_got_len(),
+               p->raw_hex().c_str());
 
       ESP_LOGW(TAG,
                "TRUNCATED frame: mode=%s want=%u got=%u raw_got=%u RSSI=%ddBm",
                mode, (unsigned) p->want_len(), (unsigned) p->got_len(),
                (unsigned) p->raw_got_len(), (int) p->get_rssi());
+
+      ESP_LOGW(TAG, "TRUNCATED raw(hex)=%s", p->raw_hex().c_str());
 
       if (mqtt::global_mqtt_client != nullptr && !this->diag_topic_.empty()) {
         mqtt::global_mqtt_client->publish(this->diag_topic_, payload);
@@ -127,18 +130,20 @@ void Radio::loop() {
     } else if (!p->drop_reason().empty()) {
       const char *mode = link_mode_name(p->get_link_mode());
 
-      char payload[256];
+      char payload[900];
       snprintf(payload, sizeof(payload),
-               "{\"event\":\"dropped\",\"reason\":\"%s\",\"mode\":\"%s\",\"rssi\":%d,\"want\":%u,\"got\":%u,\"raw_got\":%u}",
+               "{\"event\":\"dropped\",\"reason\":\"%s\",\"mode\":\"%s\",\"rssi\":%d,\"want\":%u,\"got\":%u,\"raw_got\":%u,\"raw\":\"%s\"}",
                p->drop_reason().c_str(), mode, (int) p->get_rssi(),
                (unsigned) p->want_len(), (unsigned) p->got_len(),
-               (unsigned) p->raw_got_len());
+               (unsigned) p->raw_got_len(), p->raw_hex().c_str());
 
       ESP_LOGW(TAG,
                "DROPPED packet: reason=%s mode=%s want=%u got=%u raw_got=%u RSSI=%ddBm",
                p->drop_reason().c_str(), mode, (unsigned) p->want_len(),
                (unsigned) p->got_len(), (unsigned) p->raw_got_len(),
                (int) p->get_rssi());
+
+      ESP_LOGW(TAG, "DROPPED raw(hex)=%s", p->raw_hex().c_str());
 
       if (mqtt::global_mqtt_client != nullptr && !this->diag_topic_.empty()) {
         mqtt::global_mqtt_client->publish(this->diag_topic_, payload);
