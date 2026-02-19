@@ -202,6 +202,7 @@ void SX1262::setup() {
   const uint8_t gain =
       (this->rx_gain_ == SX1262RxGain::POWER_SAVING) ? RX_GAIN_POWER_SAVING : RX_GAIN_BOOSTED;
   this->write_register_(REG_RX_GAIN, {gain});
+  ESP_LOGI(TAG, "RX gain: %s", (this->rx_gain_ == SX1262RxGain::POWER_SAVING) ? "POWER_SAVING" : "BOOSTED");
 
   this->cmd_write_(CMD_SET_STANDBY, {STANDBY_RC});
 

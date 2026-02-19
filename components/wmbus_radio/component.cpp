@@ -4,6 +4,7 @@
 #include "freertos/task.h"
 
 #include "esphome/core/log.h"
+#include "esphome/core/helpers.h"
 
 // Optional: publish diagnostics via ESPHome MQTT if mqtt component is present.
 #include "esphome/components/mqtt/mqtt_client.h"
@@ -26,6 +27,63 @@ namespace esphome {
 namespace wmbus_radio {
 static const char *TAG = "wmbus";
 
+
+Radio::DropBucket Radio::bucket_for_reason_(const std::string &reason) {
+  // Keep this stable: these strings come from Packet::set_drop_reason()
+  if (reason == "too_short") return DB_TOO_SHORT;
+  if (reason == "decode_failed") return DB_DECODE_FAILED;
+  if (reason == "dll_crc_strip_failed") return DB_DLL_CRC_STRIP_FAILED;
+  if (reason == "unknown_preamble") return DB_UNKNOWN_PREAMBLE;
+  if (reason == "l_field_invalid") return DB_L_FIELD_INVALID;
+  if (reason == "unknown_link_mode") return DB_UNKNOWN_LINK_MODE;
+  return DB_OTHER;
+}
+
+void Radio::maybe_publish_diag_summary_(uint32_t now_ms) {
+  if (this->diag_topic_.empty()) return;
+  if (this->last_diag_summary_ms_ == 0) {
+    this->last_diag_summary_ms_ = now_ms;
+    return;
+  }
+  uint32_t elapsed = now_ms - this->last_diag_summary_ms_;
+  if (elapsed < DIAG_SUMMARY_INTERVAL_MS) return;
+  this->last_diag_summary_ms_ = now_ms;
+
+  // Publish summary only if MQTT is available and connected
+  auto *mqtt = esphome::mqtt::global_mqtt_client;
+  if (mqtt == nullptr || !mqtt->is_connected()) return;
+
+  char payload[512];
+  snprintf(payload, sizeof(payload),
+           "{"
+           "\"event\":\"summary\","
+           "\"truncated\":%u,"
+           "\"dropped\":%u,"
+           "\"dropped_by_reason\":{"
+           "\"too_short\":%u,"
+           "\"decode_failed\":%u,"
+           "\"dll_crc_strip_failed\":%u,"
+           "\"unknown_preamble\":%u,"
+           "\"l_field_invalid\":%u,"
+           "\"unknown_link_mode\":%u,"
+           "\"other\":%u"
+           "}"
+           "}",
+           (unsigned) this->diag_truncated_,
+           (unsigned) this->diag_dropped_,
+           (unsigned) this->diag_dropped_by_bucket_[DB_TOO_SHORT],
+           (unsigned) this->diag_dropped_by_bucket_[DB_DECODE_FAILED],
+           (unsigned) this->diag_dropped_by_bucket_[DB_DLL_CRC_STRIP_FAILED],
+           (unsigned) this->diag_dropped_by_bucket_[DB_UNKNOWN_PREAMBLE],
+           (unsigned) this->diag_dropped_by_bucket_[DB_L_FIELD_INVALID],
+           (unsigned) this->diag_dropped_by_bucket_[DB_UNKNOWN_LINK_MODE],
+           (unsigned) this->diag_dropped_by_bucket_[DB_OTHER]);
+
+  mqtt->publish(this->diag_topic_, payload);
+  ESP_LOGI(TAG, "DIAG summary published to %s (truncated=%u dropped=%u)",
+           this->diag_topic_.c_str(), (unsigned) this->diag_truncated_, (unsigned) this->diag_dropped_);
+}
+
 void Radio::setup() {
   ASSERT_SETUP(this->packet_queue_ = xQueueCreate(3, sizeof(Packet *)));
 
@@ -39,6 +97,7 @@ void Radio::setup() {
 }
 
 void Radio::loop() {
+  this->maybe_publish_diag_summary_((uint32_t) esphome::millis());
   Packet *p;
   if (xQueueReceive(this->packet_queue_, &p, 0) != pdPASS)
     return;
@@ -47,6 +106,7 @@ void Radio::loop() {
   if (!frame) {
     // Diagnostics: truncated frame detection
     if (p->is_truncated()) {
+      this->diag_truncated_++;
       const char *mode = link_mode_name(p->get_link_mode());
 
       // Build a small JSON payload (no dynamic allocation explosions)
@@ -65,7 +125,24 @@ void Radio::loop() {
         mqtt::global_mqtt_client->publish(this->diag_topic_, payload);
       }
     } else if (!p->drop_reason().empty()) {
-      ESP_LOGV(TAG, "Dropped packet (%s)", p->drop_reason().c_str());
+      const char *mode = link_mode_name(p->get_link_mode());
+
+      char payload[256];
+      snprintf(payload, sizeof(payload),
+               "{\"event\":\"dropped\",\"reason\":\"%s\",\"mode\":\"%s\",\"rssi\":%d,\"want\":%u,\"got\":%u,\"raw_got\":%u}",
+               p->drop_reason().c_str(), mode, (int) p->get_rssi(),
+               (unsigned) p->want_len(), (unsigned) p->got_len(),
+               (unsigned) p->raw_got_len());
+
+      ESP_LOGW(TAG,
+               "DROPPED packet: reason=%s mode=%s want=%u got=%u raw_got=%u RSSI=%ddBm",
+               p->drop_reason().c_str(), mode, (unsigned) p->want_len(),
+               (unsigned) p->got_len(), (unsigned) p->raw_got_len(),
+               (int) p->get_rssi());
+
+      if (mqtt::global_mqtt_client != nullptr && !this->diag_topic_.empty()) {
+        mqtt::global_mqtt_client->publish(this->diag_topic_, payload);
+      }
     }
 
     delete p;
