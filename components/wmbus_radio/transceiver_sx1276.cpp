@@ -34,6 +34,9 @@ void SX1276::setup() {
   // RX bandwidth = 250 kHz
   this->spi_write(0x12, 0x18);
 
+  // AFC bandwidth = 500 kHz
+  this->spi_write(0x13, 0x10);
+
   ESP_LOGVV(TAG, "set frequency deviation");
   const uint16_t freq_dev = 50000;
   uint16_t frd = ((uint64_t)freq_dev * (1 << 19)) / F_OSC;
