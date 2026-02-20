@@ -33,7 +33,7 @@ void SX1276::setup() {
   ESP_LOGVV(TAG, "setting radio bandwidth");
   
   // RX bandwidth = 250 kHz
-  this->spi_write(0x12, {0x12, 0x18}); //2, 2
+  this->spi_write(0x12, {2, 2}); //2, 2
 
   ESP_LOGVV(TAG, "set frequency deviation");
   const uint16_t freq_dev = 50000;
