@@ -104,7 +104,7 @@ void SX1276::restart_rx() {
 
   // Standby mode
   this->spi_write(0x01, (uint8_t)0b001);
-  delay(5);
+ // delay(5);
 
   // Update sync word (RegSyncValue1/2)
   this->spi_write(0x28, {0x54, sync2});
@@ -114,7 +114,7 @@ void SX1276::restart_rx() {
 
   // Enable RX
   this->spi_write(0x01, (uint8_t)0b101);
-  delay(5);
+//delay(5);
 }
 
 int8_t SX1276::get_rssi() {
