@@ -105,15 +105,18 @@ void SX1276::restart_rx() {
   // Standby mode
   this->spi_write(0x01, (uint8_t)0b001);
  // delay(5);
-
+  delayMicroseconds(500);
+  
   // Update sync word (RegSyncValue1/2)
   this->spi_write(0x28, {0x54, sync2});
 
   // Clear FIFO
   this->spi_write(0x3F, (uint8_t)(1 << 4));
 
+
   // Enable RX
   this->spi_write(0x01, (uint8_t)0b101);
+  delayMicroseconds(500);
 //delay(5);
 }
 
